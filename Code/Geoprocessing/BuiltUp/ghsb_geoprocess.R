@@ -70,10 +70,10 @@ sub_dirz <- lapply(seq_along(admz),function(a0){dir(paste0("Data/Admin/",admz[a0
 
 # Subset
 a0 <- 4
-print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
-sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
-# print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
-# sub_dirz <- sub_dirz %>% .[!duplicated(umap)] %>% .[which(!exists),]
+# print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
+# sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
+print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
+sub_dirz <- sub_dirz %>% .[!duplicated(umap)] %>% .[which(!exists),]
 print(nrow(sub_dirz))
 if(nrow(sub_dirz)==0){stop("All files have been processed.")}
 
@@ -172,7 +172,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 					# Zonal stats
 					map_z <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("busurf_mean")
 					map_z_sum <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sum",na.rm=TRUE) %>% data.table::setnames("busurf_sum")
-					map_z_ct <- terra::extract(f_tif_m0, map00.0 %>% sf::st_as_sf() %>% terra::vect()) %>% group_by(ID) %>% dplyr::summarise(busurf_ct=n()) 
+					map_z_ct <- terra::extract(f_tif_m0, map00.0 %>% sf::st_as_sf() %>% terra::vect()) %>% dplyr::group_by(ID) %>% dplyr::summarise(busurf_ct=n()) 
 					
 					# Save
 					map_z <- map_z %>% data.table::as.data.table() %>% .[,SG_POLYID:=poly_idz] %>% .[,YEAR:=ticker[t,YEAR]] %>% .[,busurf_sum:=map_z_sum$busurf_sum] %>% .[,busurf_ct:=map_z_ct$busurf_ct] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())

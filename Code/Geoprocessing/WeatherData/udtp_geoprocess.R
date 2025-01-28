@@ -75,10 +75,10 @@ sub_dirz[geoset%in%"geoBoundaries"]
 # Subset
 # Subset
 a0 <- 2
-print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
-sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
-# print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
-# sub_dirz <- sub_dirz %>% .[!duplicated(umap)] %>% .[which(!exists),]
+# print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
+# sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
+print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
+sub_dirz <- sub_dirz %>% .[!duplicated(umap)] %>% .[which(!exists),]
 print(nrow(sub_dirz))
 if(nrow(sub_dirz)==0){stop("All files have been processed.")}
 sub_dirz

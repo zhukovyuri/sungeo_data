@@ -154,15 +154,15 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 
 			# Zonal stats
 			map_z_mean <- terra::zonal(x=etopo1_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("elev_mean")
-			map_z_sd <- terra::zonal(x=etopo1_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("elev_ed")
+			map_z_sd <- terra::zonal(x=etopo1_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("elev_sd")
 			map_z_min <- terra::zonal(x=etopo1_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="min",na.rm=TRUE) %>% data.table::setnames("elev_min")
 			map_z_max <- terra::zonal(x=etopo1_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="max",na.rm=TRUE) %>% data.table::setnames("elev_max")
 			map_slope_mean <- terra::zonal(x=slope_m0[["slope"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("slope_mean")
-			map_slope_sd <- terra::zonal(x=slope_m0[["slope"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("slope_ed")
+			map_slope_sd <- terra::zonal(x=slope_m0[["slope"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("slope_sd")
 			map_slope_min <- terra::zonal(x=slope_m0[["slope"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="min",na.rm=TRUE) %>% data.table::setnames("slope_min")
 			map_slope_max <- terra::zonal(x=slope_m0[["slope"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="max",na.rm=TRUE) %>% data.table::setnames("slope_max")
 			map_tri_mean <- terra::zonal(x=slope_m0[["TRI"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("tri_mean")
-			map_tri_sd <- terra::zonal(x=slope_m0[["TRI"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("tri_ed")
+			map_tri_sd <- terra::zonal(x=slope_m0[["TRI"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sd",na.rm=TRUE) %>% data.table::setnames("tri_sd")
 			map_tri_min <- terra::zonal(x=slope_m0[["TRI"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="min",na.rm=TRUE) %>% data.table::setnames("tri_min")
 			map_tri_max <- terra::zonal(x=slope_m0[["TRI"]],z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="max",na.rm=TRUE) %>% data.table::setnames("tri_max")
 

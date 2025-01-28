@@ -70,7 +70,7 @@ sub_dirz <- lapply(seq_along(admz),function(a0){dir(paste0("Data/Admin/",admz[a0
 # }); 
 
 # Subset
-a0 <- 7
+a0 <- 9
 print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
 sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
 # print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
