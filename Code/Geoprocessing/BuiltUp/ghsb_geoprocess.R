@@ -79,7 +79,7 @@ if(nrow(sub_dirz)==0){stop("All files have been processed.")}
 
 # tc_type <- "tmax"
 # k0 <- sub_dirz[,grep("RUS_GAUL1990_ADM1",fnn)]; sub_dirz[k0]
-k0 <- 4; sub_dirz[k0]
+k0 <- 1; sub_dirz[k0]
 
 # Number of cores
 mem0 <- sapply(ls(),function(x){object.size(get(x))/1000}) %>% sum()
@@ -88,19 +88,19 @@ mem_all <- as.numeric(system("awk '/MemAvailable/ {print $2}' /proc/meminfo", in
 ncores <- min(floor(mem_all/mem0),parallel::detectCores())/4
 
 
-# PSOCK
-ncores <- min(nrow(sub_dirz),ncores)
-cl <- parallel::makePSOCKcluster(ncores, outfile="")
-# cl <- parallel::makeCluster(ncores,type = "MPI", outfile="")
-parallel::setDefaultCluster(cl)
-parallel::clusterExport(NULL,c("extra_verbose","skip_existing","sub_dirz","admz","ncores","mem_all","mem0","ticker","filez"),envir = environment())
-cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
+# # PSOCK
+# ncores <- min(nrow(sub_dirz),ncores)
+# cl <- parallel::makePSOCKcluster(ncores, outfile="")
+# # cl <- parallel::makeCluster(ncores,type = "MPI", outfile="")
+# parallel::setDefaultCluster(cl)
+# parallel::clusterExport(NULL,c("extra_verbose","skip_existing","sub_dirz","admz","ncores","mem_all","mem0","ticker","filez"),envir = environment())
+# cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 
 # # Forking
 # cntz_list <- mclapply(nrow(sub_dirz):1,function(k0){
 
-# # Single core
-# cntz_list <- lapply(1:nrow(sub_dirz),function(k0){
+# Single core
+cntz_list <- lapply(1:nrow(sub_dirz),function(k0){
 
 	# Error catching 
 	tryCatch({
@@ -115,7 +115,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 		tempd <- tempdir()
 
 		# Skip if file exists
-	    if(!skip_existing|(skip_existing&!file.exists(sub_dirz[k0,fnn]))){
+    if(!skip_existing|(skip_existing&!file.exists(sub_dirz[k0,fnn]))){
 
 			# Load polygons
 			suppressWarnings({
@@ -138,7 +138,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 				bbx <- sf::st_bbox(map)
 
 				# Loop over times
-				t <- 1
+				t <- 11
 				m0 <- 1
 				bu.mat <- parallel::mclapply(1:nrow(ticker),function(t){
 
@@ -168,14 +168,28 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 
 					# Crop by country
 					f_tif_m0 <- f_tif %>% terra::crop(terra::ext(bbx))
+					# summary(f_tif_m0)
 
 					# Zonal stats
-					map_z <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("busurf_mean")
-					map_z_sum <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sum",na.rm=TRUE) %>% data.table::setnames("busurf_sum")
 					map_z_ct <- terra::extract(f_tif_m0, map00.0 %>% sf::st_as_sf() %>% terra::vect()) %>% dplyr::group_by(ID) %>% dplyr::summarise(busurf_ct=n()) 
-					
-					# Save
-					map_z <- map_z %>% data.table::as.data.table() %>% .[,SG_POLYID:=poly_idz] %>% .[,YEAR:=ticker[t,YEAR]] %>% .[,busurf_sum:=map_z_sum$busurf_sum] %>% .[,busurf_ct:=map_z_ct$busurf_ct] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
+
+					# Topic-specific exceptions
+					if(sub_dirz[k0,!iso3%in%c("ATA")]){
+
+						# Zonal stats
+						map_z_mean <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="mean",na.rm=TRUE) %>% data.table::setnames("busurf_mean")
+						map_z_sum <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sum",na.rm=TRUE) %>% data.table::setnames("busurf_sum")
+						
+						# Save
+						map_z <- map_z_mean %>% data.table::as.data.table() %>% .[,SG_POLYID:=poly_idz] %>% .[,YEAR:=ticker[t,YEAR]] %>% .[,busurf_sum:=map_z_sum$busurf_sum] %>% .[,busurf_ct:=map_z_ct$busurf_ct] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
+
+					} else {
+
+						# Save
+						map_z <- data.table::data.table(SG_POLYID=poly_idz) %>% .[,YEAR:=ticker[t,YEAR]] %>% .[,busurf_mean:=0] %>% .[,busurf_sum:=0] %>% .[,busurf_ct:=map_z_ct$busurf_ct] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
+
+					}
+
 
 					# # # Preview
 					# plot(f_tif_m0)
@@ -188,7 +202,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 					map_z					
 
 				# CLOSE lapply
-				},mc.cores=12) %>% dplyr::bind_rows()
+				},mc.cores=3) %>% dplyr::bind_rows()
 
 				# Save
 				saveRDS(bu.mat,file=sub_dirz[k0,fnn])
@@ -209,19 +223,19 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
     # write(paste0("ERROR!!! k0=",k0," " ,sub_dirz[k0, fnn]), file = log_file,append=TRUE);
     print(paste0("ERROR!!! k0=",k0," " ,sub_dirz[k0, fnn]));
     print(e)
-    })
+  })
 
-# # Close lapply
-# })
-# gc()
+# Close lapply
+})
+gc()
 
 # # Close mclapply
 # },mc.cores = min(nrow(sub_dirz),ncores))
 # gc()
 
-# Close parLapply
-}); parallel::stopCluster(cl)
-gc()
+# # Close parLapply
+# }); parallel::stopCluster(cl)
+# gc()
 # q()
 # n
 # pkill -9 R

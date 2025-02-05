@@ -1,6 +1,5 @@
 # Connect to boba
 # ssh 10.0.0.18
-# ssh 2601:189:8000:b3a0:d774:600f:ebca:d6b2
 
 # ssh zhukov@sungeo.isr.umich.edu
 # nohup R -e 'source("/data/Dropbox/SUNGEO/Code/Population/Geoprocessing/ghspop_geoprocess.R")'  > sungeo_ghspop.log 2>&1 &  
@@ -40,11 +39,9 @@ rm(list.of.packages,new.packages,loaded.packages,detachAllPackages)
 
 # Data source
 datsrz <- "Population/GHS"
-dir("Data/Population/GHS/Raw")
 
 # File list
 filez <- data.table::data.table(fn=list.files(paste0("Data/",datsrz,"/Raw"),pattern="30ss",full=TRUE))%>%.[,year:=fn%>%stringr::str_extract("\\_E\\d{4}\\_")%>%stringr::str_extract("\\d{4}")%>%as.integer()]
-# f0 <- 1
 
 # Matrix of dates
 ticker <- SUNGEO::make_ticker(date_min=filez[1,paste0(year,"0101")],date_max=filez[.N,paste0(year,"1231")]) %>% .[!duplicated(YEAR)] %>% .[YEAR%in%filez[,year]]
@@ -78,8 +75,9 @@ sub_dirz <- sub_dirz %>% .[!duplicated(umap)] %>% .[which(!exists),]
 print(nrow(sub_dirz))
 if(nrow(sub_dirz)==0){stop("All files have been processed.")}
 
+
 # tc_type <- "tmax"
-k0 <- 4; sub_dirz[k0]
+k0 <- 1; sub_dirz[k0]
 
 # Number of cores
 mem0 <- sapply(ls(),function(x){object.size(get(x))/1000}) %>% sum()
@@ -88,19 +86,19 @@ mem_all <- as.numeric(system("awk '/MemAvailable/ {print $2}' /proc/meminfo", in
 ncores <- min(floor(mem_all/mem0),parallel::detectCores())/4
 
 
-# PSOCK
-ncores <- min(nrow(sub_dirz),ncores)
-cl <- parallel::makePSOCKcluster(ncores, outfile="")
-# cl <- parallel::makeCluster(ncores,type = "MPI", outfile="")
-parallel::setDefaultCluster(cl)
-parallel::clusterExport(NULL,c("extra_verbose","skip_existing","sub_dirz","admz","ncores","mem_all","mem0","ticker","filez"),envir = environment())
-cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
+# # PSOCK
+# ncores <- min(nrow(sub_dirz),ncores)
+# cl <- parallel::makePSOCKcluster(ncores, outfile="")
+# # cl <- parallel::makeCluster(ncores,type = "MPI", outfile="")
+# parallel::setDefaultCluster(cl)
+# parallel::clusterExport(NULL,c("extra_verbose","skip_existing","sub_dirz","admz","ncores","mem_all","mem0","ticker","filez"),envir = environment())
+# cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 
 # # Forking
 # cntz_list <- mclapply(nrow(sub_dirz):1,function(k0){
 
-# # Single core
-# cntz_list <- lapply(1:nrow(sub_dirz),function(k0){
+# Single core
+cntz_list <- lapply(1:nrow(sub_dirz),function(k0){
 
 	# Error catching 
 	tryCatch({
@@ -115,7 +113,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 		tempd <- tempdir()
 
 		# Skip if file exists
-	    if(!skip_existing|(skip_existing&!file.exists(sub_dirz[k0,fnn]))){
+    if(!skip_existing|(skip_existing&!file.exists(sub_dirz[k0,fnn]))){
 
 			# Load polygons
 			suppressWarnings({
@@ -138,7 +136,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 				bbx <- sf::st_bbox(map)
 
 				# Loop over times
-				t <- 1
+				t <- 11
 				# m0 <- 1
 				pop.mat <- parallel::mclapply(1:nrow(ticker),function(t){
 
@@ -152,25 +150,36 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 					# poly_idz <- map00.0 %>% .[,paste0(sub_dirz[k0,paste0(iso3,"_",geoset,adm_yr,"_",adm,"_")],get(paste0(sub_dirz[k0,adm],"_CODE")))]
 					poly_idz <- map00.0 %>% .[,SG_POLYID]
 
-					# Unzip
-					filez_t <- filez[year%in%ticker[t,YEAR]] 
-					if(!file.exists(filez_t[,stringr::str_split(fn,"\\/")%>%sapply(dplyr::last)%>%gsub("zip$","tif",.)%>%paste0(tempd,"/",.)])){
-						unzip(filez_t[,fn],exdir=tempd)
+					# Topic-specific exceptions
+					if(sub_dirz[k0,!iso3%in%c("ATA")]){
+
+						# Unzip
+						filez_t <- filez[year%in%ticker[t,YEAR]] 
+						if(!file.exists(filez_t[,stringr::str_split(fn,"\\/")%>%sapply(dplyr::last)%>%gsub("zip$","tif",.)%>%paste0(tempd,"/",.)])){
+							unzip(filez_t[,fn],exdir=tempd)
+						}
+
+						# Load using terra package
+						f_tif <- terra::rast(filez_t[,stringr::str_split(fn,"\\/")%>%sapply(dplyr::last)%>%gsub("zip$","tif",.)%>%paste0(tempd,"/",.)])
+						# Exceptions
+						# if(sub_dirz[k0,iso3%in%c("ATA","RUS")]){
+						# 	print(paste0("reprojecting raster... (",ticker[t,YRMO],", ",sub_dirz[k0,umap],")"))
+						# 	f_tif <- terra::project(f_tif,terra::crs(map))
+						# }
+
+						# Crop by country
+						f_tif_m0 <- f_tif %>% terra::crop(terra::ext(bbx))
+						# summary(f_tif_m0)
+
+						# Zonal stats
+						map_z <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sum",na.rm=TRUE) %>% data.table::setnames("pop_sum") %>% data.table::as.data.table() %>% .[,area_km2:=(sf::st_area(map)%>%as.numeric())*0.000001] %>% .[,pop_km2:=pop_sum/area_km2] %>% .[,area_km2:=NULL] %>% .[,SG_POLYID:=poly_idz] %>% .[,YEAR:=ticker[t,YEAR]] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
+
+					} else {
+
+						# Substitute all zeros
+						map_z <- data.table::data.table(SG_POLYID=poly_idz) %>% .[,pop_sum:=0]  %>% .[,area_km2:=(sf::st_area(map)%>%as.numeric())*0.000001] %>% .[,pop_km2:=pop_sum/area_km2] %>% .[,area_km2:=NULL] %>% .[,YEAR:=ticker[t,YEAR]] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
+
 					}
-
-					# Load using terra package
-					f_tif <- terra::rast(filez_t[,stringr::str_split(fn,"\\/")%>%sapply(dplyr::last)%>%gsub("zip$","tif",.)%>%paste0(tempd,"/",.)])
-					# Exceptions
-					# if(sub_dirz[k0,iso3%in%c("ATA","RUS")]){
-					# 	print(paste0("reprojecting raster... (",ticker[t,YRMO],", ",sub_dirz[k0,umap],")"))
-					# 	f_tif <- terra::project(f_tif,terra::crs(map))
-					# }
-
-					# Crop by country
-					f_tif_m0 <- f_tif %>% terra::crop(terra::ext(bbx))
-
-					# Zonal stats
-					map_z <- terra::zonal(x=f_tif_m0,z=map00.0 %>% sf::st_as_sf() %>% terra::vect(),fun="sum",na.rm=TRUE) %>% data.table::setnames("pop_sum") %>% data.table::as.data.table() %>% .[,area_km2:=(sf::st_area(map)%>%as.numeric())*0.000001] %>% .[,pop_km2:=pop_sum/area_km2] %>% .[,area_km2:=NULL] %>% .[,SG_POLYID:=poly_idz] %>% .[,YEAR:=ticker[t,YEAR]] %>% dplyr::select("SG_POLYID","YEAR",dplyr::everything())
 
 					# # # Preview
 					# plot(f_tif_m0)
@@ -183,7 +192,7 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 					map_z					
 
 				# CLOSE lapply
-				},mc.cores=12) %>% dplyr::bind_rows()
+				},mc.cores=3) %>% dplyr::bind_rows()
 
 				# Save
 				saveRDS(pop.mat,file=sub_dirz[k0,fnn])
@@ -204,19 +213,19 @@ cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
     # write(paste0("ERROR!!! k0=",k0," " ,sub_dirz[k0, fnn]), file = log_file,append=TRUE);
     print(paste0("ERROR!!! k0=",k0," " ,sub_dirz[k0, fnn]));
     print(e)
-    })
+  })
 
-# # Close lapply
-# })
-# gc()
+# Close lapply
+})
+gc()
 
 # # Close mclapply
 # },mc.cores = min(nrow(sub_dirz),ncores))
 # gc()
 
-# Close parLapply
-}); parallel::stopCluster(cl)
-gc()
+# # Close parLapply
+# }); parallel::stopCluster(cl)
+# gc()
 # q()
 # n
 # pkill -9 R

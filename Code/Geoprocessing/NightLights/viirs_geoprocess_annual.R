@@ -70,7 +70,7 @@ sub_dirz <- lapply(seq_along(admz),function(a0){dir(paste0("Data/Admin/",admz[a0
 # }); 
 
 # Subset
-a0 <- 9
+a0 <- 6
 print(sub_dirz %>% .[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[,mean(exists)])
 sub_dirz <- sub_dirz[geoset%in%admz[a0]] %>% .[!duplicated(umap)] %>% .[which(!exists),]
 # print(sub_dirz %>% .[!duplicated(umap)] %>% .[,mean(exists)])
@@ -106,7 +106,7 @@ cl <- parallel::makePSOCKcluster(ncores, outfile="")
 # cl <- parallel::makeCluster(ncores,type = "MPI", outfile="")
 parallel::setDefaultCluster(cl)
 parallel::clusterExport(NULL,c("extra_verbose","skip_existing","sub_dirz","admz","ncores","mem_all","mem0","ticker","filez","tempd"),envir = environment())
-cntz_list <- parallel::parLapply(NULL,1:10,function(k0){
+cntz_list <- parallel::parLapply(NULL,1:nrow(sub_dirz),function(k0){
 
 # # Forking
 # cntz_list <- mclapply(nrow(sub_dirz):1,function(k0){
